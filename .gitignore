@@ -1,0 +1,41 @@
+.aws-sam
+
+node_modules
+redirect-client
+
+bin
+pkg
+install
+notes.txt
+conf/pki
+.DS_Store
+
+.idea
+*.sw?
+*.deb
+*.rpm
+*.apk
+*.tar
+
+# Binaries for programs and plugins
+*.dmg
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+.metals
+.ionide/**
+
+.fake
+.ionide
+.vscode
+
+dist/**
