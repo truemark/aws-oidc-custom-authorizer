@@ -3,6 +3,13 @@
 An AWS API Gateway [Custom Authorizer](http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html) that authorizes API requests against an OIDC provider.
 This authorizer is written in golang and compiled to arm64 to maximize performance and minimize execution costs.
 
+## Requirements
+    - This will accept a AUTHORITY and AUDIENCE environment variable and be able to take OUATH2 JWT tokens and verify them.
+
+## Libraries
+    - https://github.com/lestrrat-go/jwx
+    - https://github.com/hkra/go-jwks
+
 ## Maintainers
 
 - [erikrj](https://github.com/erikrj)
