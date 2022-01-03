@@ -1,10 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"json"
 	"net/http"
 	"os"
 	"strings"
@@ -28,8 +28,8 @@ var (
 )
 
 type Config struct {
-	Authority       string
-	Audience        string
+	AuthorityEnv    string
+	AudienceEnv     string
 	OpenIDConfigURL string
 	OpenIDConfig    OpenIDConfig
 }
@@ -69,12 +69,14 @@ func setupConfig() Config {
 	audienceEnv := os.Getenv("AUDIENCE")
 
 	openIdConfigURL := authorityEnv + OpenidConfigUrlPostFix
-	openIdConfigURL = strings.Replace(openIdConfigURL, "//", "/")
+	if strings.Contains(openIdConfigURL, "//") {
+		openIdConfigURL = strings.Replace(openIdConfigURL, "//", "/", -1)
+	}
 	openIdConfig := getOpenIDConfiguration(openIdConfigURL)
 
 	config := Config{
-		Authority:       authorityEnv,
-		Audience:        audienceEnv,
+		AuthorityEnv:    authorityEnv,
+		AudienceEnv:     audienceEnv,
 		OpenIDConfigURL: openIdConfigURL,
 		OpenIDConfig:    openIdConfig,
 	}
@@ -118,24 +120,21 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	// authToken := getToken()
 
-	resp, err := http.Get(DefaultHTTPGetAddress)
-	if err != nil {
-		return events.APIGatewayProxyResponse{}, err
-	}
-
-	if resp.StatusCode != 200 {
-		return events.APIGatewayProxyResponse{}, ErrNon200Response
-	}
-
-	ip, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return events.APIGatewayProxyResponse{}, err
-	}
-
-	if len(ip) == 0 {
-		return events.APIGatewayProxyResponse{}, ErrNoIP
-	}
-
+	// resp, err := http.Get(DefaultHTTPGetAddress)
+	// if err != nil {
+	// 	return events.APIGatewayProxyResponse{}, err
+	// }
+	// if resp.StatusCode != 200 {
+	// 	return events.APIGatewayProxyResponse{}, ErrNon200Response
+	// }
+	// ip, err := ioutil.ReadAll(resp.Body)
+	// if err != nil {
+	// 	return events.APIGatewayProxyResponse{}, err
+	// }
+	// if len(ip) == 0 {
+	// 	return events.APIGatewayProxyResponse{}, ErrNoIP
+	// }
+	ip := "myIP"
 	return events.APIGatewayProxyResponse{
 		Body:       fmt.Sprintf("Hello, %v", string(ip)),
 		StatusCode: 200,

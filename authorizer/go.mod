@@ -1,8 +1,7 @@
-require (
-	github.com/aws/aws-lambda-go v1.23.0
-	github.com/lestrrat-go/jwx/cmd/jwx v0.0.0-20211230051747-b1febefb3f20 // indirect
-)
+require github.com/aws/aws-lambda-go v1.27.1
 
-module hello-world
+require github.com/stretchr/testify v1.7.0 // indirect
 
-go 1.16
+module github.com/truemark/aws-oidc-custom-authorizer
+
+go 1.17

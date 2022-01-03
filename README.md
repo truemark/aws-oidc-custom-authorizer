@@ -1,6 +1,6 @@
 # aws-oidc-custom-authorizer
 
-An AWS API Gateway [Custom Authorizer](http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html) that authorizes API requests against an OIDC provider.
+An AWS API Gateway [Lambda Authorizer](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html) that authorizes API requests against an OIDC provider.
 This authorizer is written in golang and compiled to arm64 to maximize performance and minimize execution costs.
 
 ## Requirements
