@@ -18,3 +18,13 @@ This authorizer is written in golang and compiled to arm64 to maximize performan
 
 The contents of this repository are under the BSD 3-Clause license. See the
 license [here](https://github.com/truemark/aws-cli-docker/blob/main/LICENSE.txt).
+
+
+## Dev Notes (temp section)
+
+### x86_64 / ARM64 targets for dev vs deploy
+We need to setup the build to produce targets depending on dev vs deploy - the local builds need 
+the make target setup to build a x86_64 target for a local docker container deployment. See:
+   - https://docs.aws.amazon.com/lambda/latest/dg/golang-package.html
+
+   

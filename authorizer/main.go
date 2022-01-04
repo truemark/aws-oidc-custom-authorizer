@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/truemark/aws-oidc-custom-authorizer/logging"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 )
@@ -24,10 +26,10 @@ var (
 	ErrNon200Response = errors.New("Non 200 Response found")
 
 	// Path as post-fix for OpenID Configuration URL
-	OpenidConfigUrlPostFix = "/.well-known/openid-configuration"
+	OpenidConfigUrlPostFix = ".well-known/openid-configuration"
 )
 
-type Config struct {
+type Config interface {
 	AuthorityEnv    string
 	AudienceEnv     string
 	OpenIDConfigURL string
@@ -63,15 +65,18 @@ type OpenIDConfig struct {
 	RequestParameterSupported         bool     `json:"request_parameter_supported"`           //: true
 }
 
-func setupConfig() Config {
+func setupConfig() (Config, error) {
 
 	authorityEnv := os.Getenv("AUTHORITY")
 	audienceEnv := os.Getenv("AUDIENCE")
 
 	openIdConfigURL := authorityEnv + OpenidConfigUrlPostFix
-	if strings.Contains(openIdConfigURL, "//") {
-		openIdConfigURL = strings.Replace(openIdConfigURL, "//", "/", -1)
+	if strings.HasPrefix(openIdConfigURL, "http://") {
+		return nil, errors.New("HTTP URL values for the AUTHORITY environment-variable is unsupported.")
 	}
+	// if strings.Contains(openIdConfigURL, "//") {
+	// 	openIdConfigURL = strings.Replace(openIdConfigURL, "//", "/", -1)
+	// }
 	openIdConfig := getOpenIDConfiguration(openIdConfigURL)
 
 	config := Config{
@@ -80,7 +85,7 @@ func setupConfig() Config {
 		OpenIDConfigURL: openIdConfigURL,
 		OpenIDConfig:    openIdConfig,
 	}
-	return config
+	return config, nil
 }
 
 func getOpenIDConfiguration(url string) OpenIDConfig {
@@ -110,6 +115,8 @@ func getToken() {
 }
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	logging.LogRequest(request)
+
 	fmt.Printf("request: %v\n", request)
 
 	config := setupConfig()
@@ -142,5 +149,6 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func main() {
+	logging.Init()
 	lambda.Start(handler)
 }
