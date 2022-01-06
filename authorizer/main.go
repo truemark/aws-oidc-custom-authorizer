@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/lestrrat-go/jwx/jwk"
 )
 
 var (
@@ -110,7 +111,7 @@ func getOpenIDConfiguration(url string) *OpenIDConfig {
 	return &openIDConfig
 }
 
-func getJWKSConfig(url string) {
+func getJWKStr(url string) string {
 	res, err := http.Get(url)
 	if err != nil {
 		panic(err.Error())
@@ -119,7 +120,7 @@ func getJWKSConfig(url string) {
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("JWKS info: %v\n", string(body))
+	return string(body)
 }
 
 func getPolicyDocument() {
@@ -139,7 +140,15 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	config, _ := setupConfig()
 	fmt.Printf("config: %v\n", config)
 	fmt.Printf("config.JWKS_URI: %v\n", config.OpenIDConfig.JWKS_URI)
-	getJWKSConfig(config.OpenIDConfig.JWKS_URI)
+
+	ctx := context.Background()
+	ar := jwk.NewAutoRefresh(ctx)
+	ar.Configure(config.OpenIDConfig.JWKS_URI)
+	keyset, err := ar.Fetch(ctx, `https://example.com/certs/pubkeys.json`)
+	jsonKeyset, err := json.MarshalIndent(keyset, "", "  ")
+	fmt.Printf("KeySet as JSON:\n")
+	fmt.Println(string(jsonKeyset))	
+	// getJWKStr()
 
 	fmt.Printf("request.Headers: %v\n", request.Headers)
 	fmt.Printf("request.Body: %v\n", request.Body)
