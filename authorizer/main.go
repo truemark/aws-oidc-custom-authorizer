@@ -78,37 +78,29 @@ func getOpenIDConfiguration(url string) *config.OpenIDConfig {
 	return &openIDConfig
 }
 
-// func getJWKStr(url string) string {
-// 	res, err := http.Get(url)
-// 	if err != nil {
-// 		panic(err.Error())
-// 	}
-// 	body, err := ioutil.ReadAll(res.Body)
-// 	if err != nil {
-// 		panic(err.Error())
-// 	}
-// 	return string(body)
-// }
-
 func getPolicyDocument() {
 
 }
 
-func getToken() {
-	// params {methodArn, authorizationToken}
+func getToken(requestHeader string) (string, error) {
+	return "", nil
+}
 
+func verifyToken(token string) (bool, error) {
+	return true, nil
 }
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	logging.LogRequest(request)
 
-	fmt.Printf("request: %v\n", request)
+	// Setup our Config object
 	config, err := setupConfig()
 	if err != nil {
 		fmt.Println("error")
 	}
 	logging.LogConfig(config)
 
+	// Setup JWK and retreive our cached key...
 	ctx := context.Background()
 	ar := jwk.NewAutoRefresh(ctx)
 	ar.Configure(config.OpenIDConfig.JWKS_URI)
@@ -119,24 +111,13 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 	logging.LogKeySet(keyset)
 
-	// authToken := getToken()
-	// resp, err := http.Get(DefaultHTTPGetAddress)
-	// if err != nil {
-	// 	return events.APIGatewayProxyResponse{}, err
-	// }
-	// if resp.StatusCode != 200 {
-	// 	return events.APIGatewayProxyResponse{}, ErrNon200Response
-	// }
-	// ip, err := ioutil.ReadAll(resp.Body)
-	// if err != nil {
-	// 	return events.APIGatewayProxyResponse{}, err
-	// }
-	// if len(ip) == 0 {
-	// 	return events.APIGatewayProxyResponse{}, ErrNoIP
-	// }
-	ip := "myIP"
+	bearer := request.Headers["authorizationToken"]
+	authToken, err := getToken(bearer)
+	tokenVerified, err := verifyToken(authToken)
+	fmt.Printf("Token Verified: %s\n", tokenVerified)
+
 	return events.APIGatewayProxyResponse{
-		Body:       fmt.Sprintf("Hello, %v", string(ip)),
+		Body:       "Hello JKW World",
 		StatusCode: 200,
 	}, nil
 }
