@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"github.com/truemark/aws-oidc-custom-authorizer/config"
 	"github.com/truemark/aws-oidc-custom-authorizer/logging"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -31,41 +33,7 @@ var (
 	OpenidConfigUrlPostFix = ".well-known/openid-configuration"
 )
 
-type Config struct {
-	AuthorityEnv    string
-	AudienceEnv     string
-	OpenIDConfigURL string // TODO: not sure we need this...
-	OpenIDConfig    *OpenIDConfig
-}
-
-type OpenIDConfig struct {
-	Issuer                             string   `json:"issuer"`
-	JWKS_URI                           string   `json:"jwks_uri"`
-	AuthorizationEndpoint              string   `json:"authorization_endpoint"`
-	TokenEndpoint                      string   `json:"token_endpoint"`
-	UserInfoEndpoint                   string   `json:"userinfo_endpoint"`
-	EndSessionEndpoint                 string   `json:"end_session_endpoint"`
-	CheckSessionIFrame                 string   `json:"check_session_iframe"`
-	RevocationEndpoint                 string   `json:"revocation_endpoint"`
-	IntrospectionEndpoint              string   `json:"introspection_endpoint"`
-	DeviceAuthorizationEndpoint        string   `json:"device_authorization_endpoint"`
-	FrontChannelLogoutSupported        bool     `json:"frontchannel_logout_supported"`
-	FrontChannelLogoutSessionSupported bool     `json:"frontchannel_logout_session_supported"`
-	BackChannelLogoutSupported         bool     `json:"backchannel_logout_supported"`
-	BackChannelLogoutSessionSupported  bool     `json:"backchannel_logout_session_supported"`
-	ScopesSupported                    []string `json:"scopes_supported"`
-	ClaimsSupported                    []string `json:"claims_supported"`
-	GrantTypesSupported                []string `json:"grant_types_supported"`
-	ResponseTypesSupported             []string `json:"response_types_supported"`
-	ResponseModesSupported             []string `json:"response_modes_supported"`
-	TokenEndpointAuthMethodsSupported  []string `json:"token_endpoint_auth_methods_supported"`
-	IdTokenSigningAlgValuesSupported   []string `json:"id_token_signing_alg_values_supported"`
-	SubjectTypesSupported              []string `json:"subject_types_supported"`
-	CodeChallengeMethodsSupported      []string `json:"code_challenge_methods_supported"`
-	RequestParameterSupported          bool     `json:"request_parameter_supported"`
-}
-
-func setupConfig() (*Config, error) {
+func setupConfig() (*config.Config, error) {
 	authorityEnv := os.Getenv("AUTHORITY")
 	audienceEnv := os.Getenv("AUDIENCE")
 
@@ -86,7 +54,7 @@ func setupConfig() (*Config, error) {
 		Msg("OpenID Configuration Data URL")
 	openIdConfig := getOpenIDConfiguration(openIdConfigURL)
 
-	config := Config{
+	config := config.Config{
 		AuthorityEnv:    authorityEnv,
 		AudienceEnv:     audienceEnv,
 		OpenIDConfigURL: openIdConfigURL,
@@ -95,7 +63,7 @@ func setupConfig() (*Config, error) {
 	return &config, nil
 }
 
-func getOpenIDConfiguration(url string) *OpenIDConfig {
+func getOpenIDConfiguration(url string) *config.OpenIDConfig {
 	res, err := http.Get(url)
 	if err != nil {
 		panic(err.Error())
@@ -104,24 +72,23 @@ func getOpenIDConfiguration(url string) *OpenIDConfig {
 	if err != nil {
 		panic(err.Error())
 	}
-	var openIDConfig OpenIDConfig
+	var openIDConfig config.OpenIDConfig
 	json.Unmarshal(body, &openIDConfig)
-	fmt.Printf("OpenID Config Results: %v\n", openIDConfig)
 
 	return &openIDConfig
 }
 
-func getJWKStr(url string) string {
-	res, err := http.Get(url)
-	if err != nil {
-		panic(err.Error())
-	}
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		panic(err.Error())
-	}
-	return string(body)
-}
+// func getJWKStr(url string) string {
+// 	res, err := http.Get(url)
+// 	if err != nil {
+// 		panic(err.Error())
+// 	}
+// 	body, err := ioutil.ReadAll(res.Body)
+// 	if err != nil {
+// 		panic(err.Error())
+// 	}
+// 	return string(body)
+// }
 
 func getPolicyDocument() {
 
@@ -136,25 +103,23 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	logging.LogRequest(request)
 
 	fmt.Printf("request: %v\n", request)
-
-	config, _ := setupConfig()
-	fmt.Printf("config: %v\n", config)
-	fmt.Printf("config.JWKS_URI: %v\n", config.OpenIDConfig.JWKS_URI)
+	config, err := setupConfig()
+	if err != nil {
+		fmt.Println("error")
+	}
+	logging.LogConfig(config)
 
 	ctx := context.Background()
 	ar := jwk.NewAutoRefresh(ctx)
 	ar.Configure(config.OpenIDConfig.JWKS_URI)
-	keyset, err := ar.Fetch(ctx, `https://example.com/certs/pubkeys.json`)
-	jsonKeyset, err := json.MarshalIndent(keyset, "", "  ")
-	fmt.Printf("KeySet as JSON:\n")
-	fmt.Println(string(jsonKeyset))	
-	// getJWKStr()
-
-	fmt.Printf("request.Headers: %v\n", request.Headers)
-	fmt.Printf("request.Body: %v\n", request.Body)
+	keyset, err := ar.Refresh(ctx, config.OpenIDConfig.JWKS_URI)
+	if err != nil {
+		fmt.Println("error")
+		return events.APIGatewayProxyResponse{}, err
+	}
+	logging.LogKeySet(keyset)
 
 	// authToken := getToken()
-
 	// resp, err := http.Get(DefaultHTTPGetAddress)
 	// if err != nil {
 	// 	return events.APIGatewayProxyResponse{}, err

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/truemark/aws-oidc-custom-authorizer/config"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -46,4 +49,15 @@ func LogRequest(request events.APIGatewayProxyRequest) {
 		j, _ := json.MarshalIndent(request, "", "  ")
 		fmt.Println(string(j))
 	}
+}
+
+func LogConfig(config *config.Config) {
+	fmt.Printf("config: %v\n", config)
+	fmt.Printf("config.JWKS_URI: %v\n", config.OpenIDConfig.JWKS_URI)
+}
+
+func LogKeySet(keyset jwk.Set) {
+	fmt.Printf("KeySet as JSON:\n")
+	jsonKeyset, _ := json.MarshalIndent(keyset, "", "  ")
+	fmt.Println(string(jsonKeyset))
 }
