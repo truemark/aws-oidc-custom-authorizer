@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	"github.com/truemark/aws-oidc-custom-authorizer/logging"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -29,54 +30,59 @@ var (
 	OpenidConfigUrlPostFix = ".well-known/openid-configuration"
 )
 
-type Config interface {
+type Config struct {
 	AuthorityEnv    string
 	AudienceEnv     string
-	OpenIDConfigURL string
-	OpenIDConfig    OpenIDConfig
+	OpenIDConfigURL string // TODO: not sure we need this...
+	OpenIDConfig    *OpenIDConfig
 }
 
 type OpenIDConfig struct {
-	Issuer                      string `json:"issuer"`                        //: "https://auth.youngliving.com",
-	JWKS_URI                    string `json:"jwks_uri"`                      //: "https://auth.youngliving.com/.well-known/openid-configuration/jwks",
-	AuthorizationEndpoint       string `json:"authorization_endpoint"`        //: "https://auth.youngliving.com/connect/authorize",
-	TokenEndpoint               string `json:"token_endpoint"`                //: "https://auth.youngliving.com/connect/token",
-	UserInfoEndpoint            string `json:"userinfo_endpoint"`             //: "https://auth.youngliving.com/connect/userinfo",
-	EndSessionEndpoint          string `json:"end_session_endpoint"`          //: "https://auth.youngliving.com/connect/endsession",
-	CheckSessionIFrame          string `json:"check_session_iframe"`          //: "https://auth.youngliving.com/connect/checksession",
-	RevocationEndpoint          string `json:"revocation_endpoint"`           //: "https://auth.youngliving.com/connect/revocation",
-	IntrospectionEndpoint       string `json:"introspection_endpoint"`        //: "https://auth.youngliving.com/connect/introspect",
-	DeviceAuthorizationEndpoint string `json:"device_authorization_endpoint"` //: "https://auth.youngliving.com/connect/deviceauthorization",
-
-	FrontChannelLogoutSupported        bool `json:"frontchannel_logout_supported"`         //: true,
-	FrontChannelLogoutSessionSupported bool `json:"frontchannel_logout_session_supported"` //: true,
-	BackChannelLogoutSupported         bool `json:"backchannel_logout_supported"`          //: true,
-	BackChannelLogoutSessionSupported  bool `json:"backchannel_logout_session_supported"`  //: true,
-
-	ScopesSupported                   []string `json:"scopes_supported"`                      //: [],
-	ClaimsSupported                   []string `json:"claims_supported"`                      //: [],
-	GrantTypesSupported               []string `json:"grant_types_supported"`                 //: [],
-	ResponseTypesSupported            []string `json:"response_types_supported"`              //: [],
-	ResponseModesSupported            []string `json:"response_modes_supported"`              //: [],
-	TokenEndpointAuthMethodsSupported []string `json:"token_endpoint_auth_methods_supported"` //: [],
-	IdTokenSigningAlgValuesSupported  []string `json:"id_token_signing_alg_values_supported"` //: [],
-	SubjectTypesSupported             []string `json:"subject_types_supported"`               //: [],
-	CodeChallengeMethodsSupported     []string `json:"code_challenge_methods_supported"`      //: [],
-	RequestParameterSupported         bool     `json:"request_parameter_supported"`           //: true
+	Issuer                             string   `json:"issuer"`
+	JWKS_URI                           string   `json:"jwks_uri"`
+	AuthorizationEndpoint              string   `json:"authorization_endpoint"`
+	TokenEndpoint                      string   `json:"token_endpoint"`
+	UserInfoEndpoint                   string   `json:"userinfo_endpoint"`
+	EndSessionEndpoint                 string   `json:"end_session_endpoint"`
+	CheckSessionIFrame                 string   `json:"check_session_iframe"`
+	RevocationEndpoint                 string   `json:"revocation_endpoint"`
+	IntrospectionEndpoint              string   `json:"introspection_endpoint"`
+	DeviceAuthorizationEndpoint        string   `json:"device_authorization_endpoint"`
+	FrontChannelLogoutSupported        bool     `json:"frontchannel_logout_supported"`
+	FrontChannelLogoutSessionSupported bool     `json:"frontchannel_logout_session_supported"`
+	BackChannelLogoutSupported         bool     `json:"backchannel_logout_supported"`
+	BackChannelLogoutSessionSupported  bool     `json:"backchannel_logout_session_supported"`
+	ScopesSupported                    []string `json:"scopes_supported"`
+	ClaimsSupported                    []string `json:"claims_supported"`
+	GrantTypesSupported                []string `json:"grant_types_supported"`
+	ResponseTypesSupported             []string `json:"response_types_supported"`
+	ResponseModesSupported             []string `json:"response_modes_supported"`
+	TokenEndpointAuthMethodsSupported  []string `json:"token_endpoint_auth_methods_supported"`
+	IdTokenSigningAlgValuesSupported   []string `json:"id_token_signing_alg_values_supported"`
+	SubjectTypesSupported              []string `json:"subject_types_supported"`
+	CodeChallengeMethodsSupported      []string `json:"code_challenge_methods_supported"`
+	RequestParameterSupported          bool     `json:"request_parameter_supported"`
 }
 
-func setupConfig() (Config, error) {
-
+func setupConfig() (*Config, error) {
 	authorityEnv := os.Getenv("AUTHORITY")
 	audienceEnv := os.Getenv("AUDIENCE")
+
+	log.Debug().Str("Authority", authorityEnv)
+	log.Debug().Str("Audience", audienceEnv)
 
 	openIdConfigURL := authorityEnv + OpenidConfigUrlPostFix
 	if strings.HasPrefix(openIdConfigURL, "http://") {
 		return nil, errors.New("HTTP URL values for the AUTHORITY environment-variable is unsupported.")
 	}
-	// if strings.Contains(openIdConfigURL, "//") {
-	// 	openIdConfigURL = strings.Replace(openIdConfigURL, "//", "/", -1)
-	// }
+	openIdConfigURL = strings.Replace(openIdConfigURL, "https://", "", 1)
+	if strings.Contains(openIdConfigURL, "//") {
+		openIdConfigURL = strings.Replace(openIdConfigURL, "//", "/", -1)
+	}
+	openIdConfigURL = "https://" + openIdConfigURL
+	log.Debug().
+		Str("openIdConfigURL", openIdConfigURL).
+		Msg("OpenID Configuration Data URL")
 	openIdConfig := getOpenIDConfiguration(openIdConfigURL)
 
 	config := Config{
@@ -85,10 +91,10 @@ func setupConfig() (Config, error) {
 		OpenIDConfigURL: openIdConfigURL,
 		OpenIDConfig:    openIdConfig,
 	}
-	return config, nil
+	return &config, nil
 }
 
-func getOpenIDConfiguration(url string) OpenIDConfig {
+func getOpenIDConfiguration(url string) *OpenIDConfig {
 	res, err := http.Get(url)
 	if err != nil {
 		panic(err.Error())
@@ -98,11 +104,22 @@ func getOpenIDConfiguration(url string) OpenIDConfig {
 		panic(err.Error())
 	}
 	var openIDConfig OpenIDConfig
-
 	json.Unmarshal(body, &openIDConfig)
-	fmt.Printf("Results: %v\n", openIDConfig)
+	fmt.Printf("OpenID Config Results: %v\n", openIDConfig)
 
-	return openIDConfig
+	return &openIDConfig
+}
+
+func getJWKSConfig(url string) {
+	res, err := http.Get(url)
+	if err != nil {
+		panic(err.Error())
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("JWKS info: %v\n", string(body))
 }
 
 func getPolicyDocument() {
@@ -119,8 +136,10 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	fmt.Printf("request: %v\n", request)
 
-	config := setupConfig()
+	config, _ := setupConfig()
 	fmt.Printf("config: %v\n", config)
+	fmt.Printf("config.JWKS_URI: %v\n", config.OpenIDConfig.JWKS_URI)
+	getJWKSConfig(config.OpenIDConfig.JWKS_URI)
 
 	fmt.Printf("request.Headers: %v\n", request.Headers)
 	fmt.Printf("request.Body: %v\n", request.Body)
