@@ -28,3 +28,7 @@ the make target setup to build a x86_64 target for a local docker container depl
    - https://docs.aws.amazon.com/lambda/latest/dg/golang-package.html
 
    
+## TODOs
+
+### Multi-targeted builds
+We still need to figure out how to nicely sense the HW were compiling on and pic the appropriate metal for it... 
