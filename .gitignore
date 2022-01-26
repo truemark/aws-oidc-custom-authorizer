@@ -1,5 +1,5 @@
 get_token.sh
-event.json
+**/event.json
 
 .aws-sam
 
