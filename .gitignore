@@ -1,3 +1,5 @@
+get_token.sh
+
 .aws-sam
 
 node_modules
