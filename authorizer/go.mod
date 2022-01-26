@@ -1,6 +1,7 @@
 require (
 	github.com/aws/aws-lambda-go v1.27.1
 	github.com/lestrrat-go/jwx v1.2.14
+	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.26.1
 )
 
@@ -12,7 +13,6 @@ require (
 	github.com/lestrrat-go/httpcc v1.0.0 // indirect
 	github.com/lestrrat-go/iter v1.0.1 // indirect
 	github.com/lestrrat-go/option v1.0.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e // indirect
 )
 
