@@ -1,5 +1,21 @@
 package config
 
+import (
+	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"strings"
+
+	"github.com/rs/zerolog/log"
+)
+
+var (
+	// Path as post-fix for OpenID Configuration URL
+	OpenidConfigUrlPostFix = ".well-known/openid-configuration"
+)
+
 type OpenIDConfig struct {
 	Issuer                             string   `json:"issuer"`
 	JWKS_URI                           string   `json:"jwks_uri"`
@@ -32,4 +48,54 @@ type Config struct {
 	AudienceEnv     string
 	OpenIDConfigURL string // TODO: not sure we need this...
 	OpenIDConfig    *OpenIDConfig
+}
+
+func SetupConfig() (*Config, error) {
+	authorityEnv := os.Getenv("AUTHORITY")
+	audienceEnv := os.Getenv("AUDIENCE")
+
+	log.Debug().Str("Authority", authorityEnv)
+	log.Debug().Str("Audience", audienceEnv)
+
+	openIdConfigURL := authorityEnv + OpenidConfigUrlPostFix
+	if strings.HasPrefix(openIdConfigURL, "http://") {
+		return nil, errors.New("HTTP URL values for the AUTHORITY environment-variable is unsupported.")
+	}
+	openIdConfigURL = strings.Replace(openIdConfigURL, "https://", "", 1)
+	if strings.Contains(openIdConfigURL, "//") {
+		openIdConfigURL = strings.Replace(openIdConfigURL, "//", "/", -1)
+	}
+	openIdConfigURL = "https://" + openIdConfigURL
+	log.Debug().
+		Str("openIdConfigURL", openIdConfigURL).
+		Msg("OpenID Configuration Data URL")
+	openIdConfig := getOpenIDConfiguration(openIdConfigURL)
+
+	config := Config{
+		AuthorityEnv:    authorityEnv,
+		AudienceEnv:     audienceEnv,
+		OpenIDConfigURL: openIdConfigURL,
+		OpenIDConfig:    openIdConfig,
+	}
+	return &config, nil
+}
+
+func getOpenIDConfiguration(url string) *OpenIDConfig {
+	res, err := http.Get(url)
+	if err != nil {
+		panic(err.Error())
+	}
+	log.Debug().Msg("HTTP GET Request Completed")
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		panic(err.Error())
+	}
+	var openIDConfig OpenIDConfig
+	json.Unmarshal(body, &openIDConfig)
+	log.Debug().
+		Str("body", string(body)).
+		Msg("OpenID (body) Configuration Struct successfully unmarshalled")
+
+	return &openIDConfig
 }

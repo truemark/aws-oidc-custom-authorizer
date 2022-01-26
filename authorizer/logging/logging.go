@@ -37,14 +37,11 @@ func Init() {
 		Out:     os.Stderr,
 		NoColor: true, // CloudWatch doesn't like colors
 	})
-	log.Trace().Msgf("logging initialized successfully")
+	log.Trace().Msg("logging initialized successfully")
 }
 
 // LogRequest will log the entire lambda request to stdout if trace is enabled
-func LogRequest(request events.APIGatewayProxyRequest) {
-	log.Debug().
-		Str("requestId", request.RequestContext.RequestID).
-		Msg("received request")
+func LogRequest(request events.APIGatewayCustomAuthorizerRequest) {
 	if log.Trace().Enabled() {
 		j, _ := json.MarshalIndent(request, "", "  ")
 		fmt.Println(string(j))
@@ -52,12 +49,19 @@ func LogRequest(request events.APIGatewayProxyRequest) {
 }
 
 func LogConfig(config *config.Config) {
-	fmt.Printf("config: %v\n", config)
-	fmt.Printf("config.JWKS_URI: %v\n", config.OpenIDConfig.JWKS_URI)
+	log.Debug().
+		Str("config", fmt.Sprintln("%v", config)).
+		Msg(fmt.Sprintf("config.JWKS_URI: %s\n", config.OpenIDConfig.JWKS_URI))
 }
 
 func LogKeySet(keyset jwk.Set) {
 	fmt.Printf("KeySet as JSON:\n")
 	jsonKeyset, _ := json.MarshalIndent(keyset, "", "  ")
 	fmt.Println(string(jsonKeyset))
+}
+
+func LogError(err error) {
+	log.Debug().
+		Str("err", err.Error()).
+		Msg("Error Message Logged")
 }

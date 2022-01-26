@@ -2,21 +2,20 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
+	"regexp"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/truemark/aws-oidc-custom-authorizer/config"
 	"github.com/truemark/aws-oidc-custom-authorizer/logging"
+	"github.com/truemark/aws-oidc-custom-authorizer/verify"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/lestrrat-go/jwx/jwk"
+	// "github.com/pkg/errors"
 )
 
 var (
@@ -28,99 +27,90 @@ var (
 
 	// ErrNon200Response non 200 status code in response
 	ErrNon200Response = errors.New("Non 200 Response found")
-
-	// Path as post-fix for OpenID Configuration URL
-	OpenidConfigUrlPostFix = ".well-known/openid-configuration"
 )
-
-func setupConfig() (*config.Config, error) {
-	authorityEnv := os.Getenv("AUTHORITY")
-	audienceEnv := os.Getenv("AUDIENCE")
-
-	log.Debug().Str("Authority", authorityEnv)
-	log.Debug().Str("Audience", audienceEnv)
-
-	openIdConfigURL := authorityEnv + OpenidConfigUrlPostFix
-	if strings.HasPrefix(openIdConfigURL, "http://") {
-		return nil, errors.New("HTTP URL values for the AUTHORITY environment-variable is unsupported.")
-	}
-	openIdConfigURL = strings.Replace(openIdConfigURL, "https://", "", 1)
-	if strings.Contains(openIdConfigURL, "//") {
-		openIdConfigURL = strings.Replace(openIdConfigURL, "//", "/", -1)
-	}
-	openIdConfigURL = "https://" + openIdConfigURL
-	log.Debug().
-		Str("openIdConfigURL", openIdConfigURL).
-		Msg("OpenID Configuration Data URL")
-	openIdConfig := getOpenIDConfiguration(openIdConfigURL)
-
-	config := config.Config{
-		AuthorityEnv:    authorityEnv,
-		AudienceEnv:     audienceEnv,
-		OpenIDConfigURL: openIdConfigURL,
-		OpenIDConfig:    openIdConfig,
-	}
-	return &config, nil
-}
-
-func getOpenIDConfiguration(url string) *config.OpenIDConfig {
-	res, err := http.Get(url)
-	if err != nil {
-		panic(err.Error())
-	}
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		panic(err.Error())
-	}
-	var openIDConfig config.OpenIDConfig
-	json.Unmarshal(body, &openIDConfig)
-
-	return &openIDConfig
-}
 
 func getPolicyDocument() {
 
 }
 
-func getToken(requestHeader string) (string, error) {
-	return "", nil
+func getToken(requestHeader string) (*string, error) {
+	//r, _ := regexp.Compile(`^Bearer (.*)$`)
+	//match := r.MatchString(requestHeader)
+
+	match, _ := regexp.Match(`Bearer (.*)`, []byte(requestHeader))
+	log.Debug().
+		Bool("match", match).
+		Str("authorizationToken", requestHeader).
+		Msg("Header Matched for AuthorizationToken on Bearer")
+
+	if !match {
+		return nil, errors.New(fmt.Sprintf("Invalid Authorization token - %s does not match \"Bearer .*\"\n", requestHeader))
+	}
+
+	r, _ := regexp.Compile(`Bearer (.*)`)
+	matchedToken := r.FindString(requestHeader)
+	keyToken := strings.Replace(matchedToken, "Bearer ", "", 1)
+	//keyToken = strings.Replace(keyToken, "'", "", -1)
+
+	log.Debug().
+		Str("matchedToken", keyToken).
+		Msg("DELETE-ME: matchedToken Found is:")
+
+	return &keyToken, nil
 }
 
-func verifyToken(token string) (bool, error) {
-	return true, nil
-}
-
-func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	logging.LogRequest(request)
+func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayProxyResponse, error) {
+	fmt.Println("ENTERING HANDLER...")
+	logging.LogRequest(event)
 
 	// Setup our Config object
-	config, err := setupConfig()
+	config, err := config.SetupConfig()
 	if err != nil {
 		fmt.Println("error")
 	}
 	logging.LogConfig(config)
 
 	// Setup JWK and retreive our cached key...
-	ctx := context.Background()
 	ar := jwk.NewAutoRefresh(ctx)
 	ar.Configure(config.OpenIDConfig.JWKS_URI)
 	keyset, err := ar.Refresh(ctx, config.OpenIDConfig.JWKS_URI)
 	if err != nil {
-		fmt.Println("error")
-		return events.APIGatewayProxyResponse{}, err
+		logging.LogError(err)
+		return events.APIGatewayProxyResponse{
+			Body:       "ERROR on Setting up JWK AUTO-REFRESH TODO::MAKE ME BETTER",
+			StatusCode: 500,
+		}, err
 	}
 	logging.LogKeySet(keyset)
 
-	bearer := request.Headers["authorizationToken"]
+	bearer := event.AuthorizationToken
+	fmt.Println("BEARER IS:")
+	fmt.Println(bearer)
 	authToken, err := getToken(bearer)
-	tokenVerified, err := verifyToken(authToken)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			Body:       "ERROR on GetToken TODO::MAKE ME BETTER",
+			StatusCode: 500,
+		}, err
+	}
+	tokenVerified, kidVerified, err := verify.VerifyToken(*authToken, keyset)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			// TODO: What do we want to supply in the body for error handling, etc...
+			Body:       "ERROR on VerifyToken TODO::MAKE ME BETTER",
+			StatusCode: 500,
+		}, err
+	}
 	fmt.Printf("Token Verified: %s\n", tokenVerified)
 
+	msg := fmt.Sprintf("{\"kid\": \"%v\", \"verified\": %v, \"verificationMethod\": \"KID_VERIFICATION\"}", kidVerified, tokenVerified)
 	return events.APIGatewayProxyResponse{
-		Body:       "Hello JKW World",
+		Body:       msg,
 		StatusCode: 200,
 	}, nil
 }
+
+// TODO: Since this is a secure/sensitive app, we need to determine what can and cant be logged into AWS, etc
 
 func main() {
 	logging.Init()
