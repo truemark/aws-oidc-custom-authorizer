@@ -15,18 +15,11 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/lestrrat-go/jwx/jwk"
-	// "github.com/pkg/errors"
 )
 
 var (
-	// DefaultHTTPGetAddress Default Address
-	DefaultHTTPGetAddress = "https://checkip.amazonaws.com"
-
-	// ErrNoIP No IP found in response
-	ErrNoIP = errors.New("No IP in HTTP response")
-
-	// ErrNon200Response non 200 status code in response
-	ErrNon200Response = errors.New("Non 200 Response found")
+	ErrStatusCode     = 500
+	SuccessStatusCode = 200
 )
 
 func getPolicyDocument() {
@@ -34,9 +27,6 @@ func getPolicyDocument() {
 }
 
 func getToken(requestHeader string) (*string, error) {
-	//r, _ := regexp.Compile(`^Bearer (.*)$`)
-	//match := r.MatchString(requestHeader)
-
 	match, _ := regexp.Match(`Bearer (.*)`, []byte(requestHeader))
 	log.Debug().
 		Bool("match", match).
@@ -44,14 +34,12 @@ func getToken(requestHeader string) (*string, error) {
 		Msg("Header Matched for AuthorizationToken on Bearer")
 
 	if !match {
-		return nil, errors.New(fmt.Sprintf("Invalid Authorization token - %s does not match \"Bearer .*\"\n", requestHeader))
+		errMsg := fmt.Sprintf("Invalid Authorization token - %s does not match \"Bearer .*\"\n", requestHeader)
+		return nil, errors.New(errMsg)
 	}
-
 	r, _ := regexp.Compile(`Bearer (.*)`)
 	matchedToken := r.FindString(requestHeader)
 	keyToken := strings.Replace(matchedToken, "Bearer ", "", 1)
-	//keyToken = strings.Replace(keyToken, "'", "", -1)
-
 	log.Debug().
 		Str("matchedToken", keyToken).
 		Msg("DELETE-ME: matchedToken Found is:")
@@ -60,7 +48,6 @@ func getToken(requestHeader string) (*string, error) {
 }
 
 func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayProxyResponse, error) {
-	fmt.Println("ENTERING HANDLER...")
 	logging.LogRequest(event)
 
 	// Setup our Config object
@@ -77,20 +64,20 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 	if err != nil {
 		logging.LogError(err)
 		return events.APIGatewayProxyResponse{
+			// TODO: Update/Enhance messaging for err handling - do we need a JSON struct here in the body? etc...
 			Body:       "ERROR on Setting up JWK AUTO-REFRESH TODO::MAKE ME BETTER",
-			StatusCode: 500,
+			StatusCode: ErrStatusCode,
 		}, err
 	}
 	logging.LogKeySet(keyset)
 
 	bearer := event.AuthorizationToken
-	fmt.Println("BEARER IS:")
-	fmt.Println(bearer)
 	authToken, err := getToken(bearer)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
+			// TODO: Update/Enhance messaging for err handling - do we need a JSON struct here in the body? etc...
 			Body:       "ERROR on GetToken TODO::MAKE ME BETTER",
-			StatusCode: 500,
+			StatusCode: ErrStatusCode,
 		}, err
 	}
 	tokenVerified, kidVerified, err := verify.VerifyToken(*authToken, keyset)
@@ -98,7 +85,7 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 		return events.APIGatewayProxyResponse{
 			// TODO: What do we want to supply in the body for error handling, etc...
 			Body:       "ERROR on VerifyToken TODO::MAKE ME BETTER",
-			StatusCode: 500,
+			StatusCode: ErrStatusCode,
 		}, err
 	}
 	fmt.Printf("Token Verified: %s\n", tokenVerified)
@@ -106,7 +93,7 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 	msg := fmt.Sprintf("{\"kid\": \"%v\", \"verified\": %v, \"verificationMethod\": \"KID_VERIFICATION\"}", kidVerified, tokenVerified)
 	return events.APIGatewayProxyResponse{
 		Body:       msg,
-		StatusCode: 200,
+		StatusCode: SuccessStatusCode,
 	}, nil
 }
 
