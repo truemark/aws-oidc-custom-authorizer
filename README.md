@@ -13,6 +13,7 @@ This authorizer is written in golang and compiled to arm64 to maximize performan
 ## Maintainers
 
 - [erikrj](https://github.com/erikrj)
+- [briancabbott](https://github.com/briancabbott)
 
 ## License
 
@@ -31,4 +32,19 @@ the make target setup to build a x86_64 target for a local docker container depl
 ## TODOs
 
 ### Multi-targeted builds
-We still need to figure out how to nicely sense the HW were compiling on and pic the appropriate metal for it... 
+We still need to figure out how to nicely sense the HW were compiling on and pic 
+the appropriate metal for it... 
+
+### Use Letstrat's verification API instead of manaul verification
+Use the jws.VerifySet() from "github.com/lestrrat-go/jwx/jws" instead of manually 
+iterating through each key. This keeps us congruent with the standard/free updates 
+from Lestrat, etc. (just better practice)
+
+### Remove/update printfs
+Either take out the extraneous prints or move them to use Error-Logging if they are useful.
+
+### Single Package/Module
+Move everything into the authorizer package and out of individual sub-modules.
+
+### Use Viper instead of manual for envs
+Perform "out of the box" type setup activities with Viper instead of manual env-varing.

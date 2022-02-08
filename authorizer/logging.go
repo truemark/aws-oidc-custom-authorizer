@@ -1,20 +1,19 @@
-package logging
+package main
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 
-	"github.com/lestrrat-go/jwx/jwk"
-	"github.com/truemark/aws-oidc-custom-authorizer/config"
-
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 // Init initializes logging reading the LOG_LEVEL from the environment
 func Init() {
+	fmt.Println("Logging INIT")
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	logLevel := os.Getenv("LOG_LEVEL")
 	// TODO Log level should be set up in template.yaml as a variable
@@ -44,20 +43,20 @@ func Init() {
 func LogRequest(request events.APIGatewayCustomAuthorizerRequest) {
 	if log.Trace().Enabled() {
 		j, _ := json.MarshalIndent(request, "", "  ")
-		fmt.Println(string(j))
+		log.Trace().Msg(fmt.Sprintf("request: %s\n", string(j)))
 	}
 }
 
-func LogConfig(config *config.Config) {
+func LogConfig(config *Config) {
 	log.Debug().
 		Str("config", fmt.Sprintln("%v", config)).
 		Msg(fmt.Sprintf("config.JWKS_URI: %s\n", config.OpenIDConfig.JWKS_URI))
 }
 
 func LogKeySet(keyset jwk.Set) {
-	fmt.Printf("KeySet as JSON:\n")
-	jsonKeyset, _ := json.MarshalIndent(keyset, "", "  ")
-	fmt.Println(string(jsonKeyset))
+	//	fmt.Printf("KeySet as JSON:\n")
+	//	jsonKeyset, _ := json.MarshalIndent(keyset, "", "  ")
+	//	fmt.Println(string(jsonKeyset))
 }
 
 func LogError(err error) {

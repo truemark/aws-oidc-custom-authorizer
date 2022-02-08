@@ -1,4 +1,4 @@
-package verify
+package main
 
 import (
 	"encoding/json"
@@ -8,7 +8,6 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/rs/zerolog/log"
-	"github.com/truemark/aws-oidc-custom-authorizer/base64"
 )
 
 func VerifyToken(tokenBuf string, keySet jwk.Set) (bool, string, error) {
@@ -18,7 +17,7 @@ func VerifyToken(tokenBuf string, keySet jwk.Set) (bool, string, error) {
 		return false, "", errors.New(`failed to split compact JWS message`)
 	}
 
-	decodedProtected, err := base64.Decode(protected)
+	decodedProtected, err := Decode(protected)
 	if err != nil {
 		return false, "", errors.New(`failed to base64 decode protected headers`)
 	}

@@ -7,14 +7,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/rs/zerolog/log"
-	"github.com/truemark/aws-oidc-custom-authorizer/config"
-	"github.com/truemark/aws-oidc-custom-authorizer/logging"
-	"github.com/truemark/aws-oidc-custom-authorizer/verify"
-
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/rs/zerolog/log"
+	//"github.com/lestrrat-go/jwx/jws"
 )
 
 var (
@@ -48,28 +45,29 @@ func getToken(requestHeader string) (*string, error) {
 }
 
 func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest) (events.APIGatewayProxyResponse, error) {
-	logging.LogRequest(event)
+	LogRequest(event)
 
 	// Setup our Config object
-	config, err := config.SetupConfig()
+	config, err := SetupConfig()
 	if err != nil {
 		fmt.Println("error")
 	}
-	logging.LogConfig(config)
+	LogConfig(config)
 
 	// Setup JWK and retreive our cached key...
 	ar := jwk.NewAutoRefresh(ctx)
 	ar.Configure(config.OpenIDConfig.JWKS_URI)
 	keyset, err := ar.Refresh(ctx, config.OpenIDConfig.JWKS_URI)
 	if err != nil {
-		logging.LogError(err)
+		LogError(err)
 		return events.APIGatewayProxyResponse{
 			// TODO: Update/Enhance messaging for err handling - do we need a JSON struct here in the body? etc...
+
 			Body:       "ERROR on Setting up JWK AUTO-REFRESH TODO::MAKE ME BETTER",
 			StatusCode: ErrStatusCode,
 		}, err
 	}
-	logging.LogKeySet(keyset)
+	LogKeySet(keyset)
 
 	bearer := event.AuthorizationToken
 	authToken, err := getToken(bearer)
@@ -80,7 +78,13 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 			StatusCode: ErrStatusCode,
 		}, err
 	}
-	tokenVerified, kidVerified, err := verify.VerifyToken(*authToken, keyset)
+
+	//// Now verify using the set.
+	//if _, err := jws.VerifySet(authToken, keyset); err != nil {
+	//	fmt.Printf("Failed to verify using jwk.Set!: %s", err)
+	//}
+
+	tokenVerified, kidVerified, err := VerifyToken(*authToken, keyset)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			// TODO: What do we want to supply in the body for error handling, etc...
@@ -100,6 +104,6 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 // TODO: Since this is a secure/sensitive app, we need to determine what can and cant be logged into AWS, etc
 
 func main() {
-	logging.Init()
+	//Init()
 	lambda.Start(handler)
 }

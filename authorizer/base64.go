@@ -1,4 +1,4 @@
-package base64
+package main
 
 import (
 	"bytes"
@@ -61,6 +61,7 @@ func Decode(src []byte) ([]byte, error) {
 	return dst[:n], nil
 }
 
-func DecodeString(src string) ([]byte, error) {
-	return Decode([]byte(src))
+func DecodeString(src string) (string, error) {
+	bval, err := Decode([]byte(src))
+	return string(bval), err
 }
