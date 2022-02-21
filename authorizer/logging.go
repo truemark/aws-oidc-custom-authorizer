@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -54,9 +55,24 @@ func LogConfig(config *Config) {
 }
 
 func LogKeySet(keyset jwk.Set) {
-	//	fmt.Printf("KeySet as JSON:\n")
-	//	jsonKeyset, _ := json.MarshalIndent(keyset, "", "  ")
-	//	fmt.Println(string(jsonKeyset))
+	fmt.Printf("KeySet as JSON:\n")
+	jsonKeyset, _ := json.MarshalIndent(keyset, "", "  ")
+	fmt.Println(string(jsonKeyset))
+}
+
+func LogKey(key jwk.Key) {
+	fmt.Printf("Key as JSON:\n")
+	jsonKey, _ := json.MarshalIndent(key, "", "  ")
+	fmt.Println(string(jsonKey))
+}
+
+func LogToken(tok jwt.Token) {
+	fmt.Printf("Token as JSON:\n")
+	jsonTok, err := json.MarshalIndent(tok, "", "  ")
+	if err != nil {
+		LogError(err)
+	}
+	fmt.Println(string(jsonTok))
 }
 
 func LogError(err error) {

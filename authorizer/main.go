@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/rs/zerolog/log"
-	//"github.com/lestrrat-go/jwx/jws"
 )
 
 var (
@@ -78,11 +77,6 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 			StatusCode: ErrStatusCode,
 		}, err
 	}
-
-	//// Now verify using the set.
-	//if _, err := jws.VerifySet(authToken, keyset); err != nil {
-	//	fmt.Printf("Failed to verify using jwk.Set!: %s", err)
-	//}
 
 	tokenVerified, kidVerified, err := VerifyToken(*authToken, keyset)
 	if err != nil {
