@@ -86,7 +86,7 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 			StatusCode: ErrStatusCode,
 		}, err
 	}
-	fmt.Printf("Token Verified: %s\n", tokenVerified)
+	//fmt.Printf("Token Verified: %s\n", tokenVerified)
 
 	msg := fmt.Sprintf("{\"kid\": \"%v\", \"verified\": %v, \"verificationMethod\": \"KID_VERIFICATION\"}", kidVerified, tokenVerified)
 	return events.APIGatewayProxyResponse{

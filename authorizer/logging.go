@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -49,9 +49,11 @@ func LogRequest(request events.APIGatewayCustomAuthorizerRequest) {
 }
 
 func LogConfig(config *Config) {
-	log.Debug().
-		Str("config", fmt.Sprintln("%v", config)).
-		Msg(fmt.Sprintf("config.JWKS_URI: %s\n", config.OpenIDConfig.JWKS_URI))
+	j, _ := json.MarshalIndent(config, "", "  ")
+	log.Debug().Msg(string(j))
+	//log.Debug().
+	//	Str("config", fmt.Sprintf("request: %s\n", config)).
+	//	Msg(fmt.Sprintf("config.JWKS_URI: %s\n", config.OpenIDConfig.JWKS_URI))
 }
 
 func LogKeySet(keyset jwk.Set) {
