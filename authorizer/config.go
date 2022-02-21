@@ -54,9 +54,6 @@ func SetupConfig() (*Config, error) {
 	authorityEnv := os.Getenv("AUTHORITY")
 	audienceEnv := os.Getenv("AUDIENCE")
 
-	log.Debug().Str("Authority", authorityEnv)
-	log.Debug().Str("Audience", audienceEnv)
-
 	openIdConfigURL := authorityEnv + OpenidConfigUrlPostFix
 	if strings.HasPrefix(openIdConfigURL, "http://") {
 		return nil, errors.New("HTTP URL values for the AUTHORITY environment-variable is unsupported.")

@@ -1,6 +1,6 @@
 get_token.sh
 **/event.json
-
+main_test.json
 .aws-sam
 
 node_modules
