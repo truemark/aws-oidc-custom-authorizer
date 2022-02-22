@@ -43,42 +43,60 @@ func Init() {
 // LogRequest will log the entire lambda request to stdout if trace is enabled
 func LogRequest(request events.APIGatewayCustomAuthorizerRequest) {
 	if log.Trace().Enabled() {
-		j, _ := json.MarshalIndent(request, "", "  ")
+		j, err := json.MarshalIndent(request, "", "  ")
+		if err != nil {
+			LogError(err)
+		}
 		log.Trace().Msg(fmt.Sprintf("request: %s\n", string(j)))
 	}
 }
 
 func LogConfig(config *Config) {
-	j, _ := json.MarshalIndent(config, "", "  ")
-	log.Debug().Msg(string(j))
-	//log.Debug().
-	//	Str("config", fmt.Sprintf("request: %s\n", config)).
-	//	Msg(fmt.Sprintf("config.JWKS_URI: %s\n", config.OpenIDConfig.JWKS_URI))
-}
-
-func LogKeySet(keyset jwk.Set) {
-	fmt.Printf("KeySet as JSON:\n")
-	jsonKeyset, _ := json.MarshalIndent(keyset, "", "  ")
-	fmt.Println(string(jsonKeyset))
-}
-
-func LogKey(key jwk.Key) {
-	fmt.Printf("Key as JSON:\n")
-	jsonKey, _ := json.MarshalIndent(key, "", "  ")
-	fmt.Println(string(jsonKey))
-}
-
-func LogToken(tok jwt.Token) {
-	fmt.Printf("Token as JSON:\n")
-	jsonTok, err := json.MarshalIndent(tok, "", "  ")
+	jsonConfig, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		LogError(err)
 	}
-	fmt.Println(string(jsonTok))
+	log.Debug().Msg("Configuration: " + string(jsonConfig))
+}
+
+func LogKeySet(keyset jwk.Set) {
+	if log.Debug().Enabled() {
+		msg := "KeySet as JSON:\n"
+		jsonKeyset, err := json.MarshalIndent(keyset, "", "  ")
+		if err != nil {
+			LogError(err)
+		}
+		msg += string(jsonKeyset)
+		log.Debug().Msg(msg)
+	}
+}
+
+func LogKey(key jwk.Key) {
+	if log.Debug().Enabled() {
+		msg := "Key as JSON:\n"
+		jsonKey, err := json.MarshalIndent(key, "", "  ")
+		if err != nil {
+			LogError(err)
+		}
+		msg += string(jsonKey)
+		log.Debug().Msg(msg)
+	}
+}
+
+func LogToken(tok jwt.Token) {
+	if log.Debug().Enabled() {
+		msg := "Token as JSON:\n"
+		jsonTok, err := json.MarshalIndent(tok, "", "  ")
+		if err != nil {
+			LogError(err)
+		}
+		msg += string(jsonTok)
+		log.Debug().Msg(msg)
+	}
 }
 
 func LogError(err error) {
-	log.Debug().
+	log.Info().
 		Str("err", err.Error()).
 		Msg("Error Message Logged")
 }

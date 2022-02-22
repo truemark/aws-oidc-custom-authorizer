@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   aws-oidc-custom-authorizer
 
-  An AWS API Gateway Custom Authorizer that authorizes API requests against an OIDC provider.
+  TrueMark AWS API Gateway Custom Authorizer that authorizes API requests against an OIDC provider.
 
 Globals:
   Function:
@@ -21,15 +21,15 @@ Resources:
       Tracing: Active
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
-          AUTHORITY: "https://auth.youngliving.com/" # Lambda will request <AUTHORITY>/.well-known/openid-configuration to find the JWKS URI, etc.
-          AUDIENCE: "XXX" # Name of the OIDC audience name for the protected resource
+          AUTHORITY: "AUTH" # Lambda will request <AUTHORITY>/.well-known/openid-configuration to find the JWKS URI, etc.
+          AUDIENCE: "AUD" # Name of the OIDC audience name for the protected resource
           LOG_LEVEL: "Trace" # ("Trace" | "Debug" | "Info" | "Warn" | "Error" | "Fatal")
     Metadata:
       BuildMethod: makefile
 
 Outputs:
   AuthorizerFunction:
-    Description: "AWS API Gateway Custom Authorizer"
+    Description: "TrueMark AWS API Gateway Custom Authorizer"
     Value: !GetAtt AuthorizerFunction.Arn
   AuthorizerFunctionIamRole:
     Description: "Implicit IAM Role created for Authorizer function"

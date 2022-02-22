@@ -80,7 +80,6 @@ func handler(ctx context.Context, event events.APIGatewayCustomAuthorizerRequest
 			StatusCode: ErrStatusCode,
 		}, err
 	}
-
 	// Perform main verification
 	token, err := jwt.Parse(
 		[]byte(authToken),
