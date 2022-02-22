@@ -14,4 +14,12 @@ jobs:
       - name: Build
         id: build
         run: |
+          export AM_CLI_TELEMETRY=0
           make
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v2
+        with:
+          name: authorizer
+          path: |
+            .aws-sam/build/AuthorizerFunction/authorizer
+          retention-days: 5
